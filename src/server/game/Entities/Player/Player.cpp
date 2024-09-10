@@ -15,6 +15,17 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// 1
+// 2
+// 3
+// 4
+// 5
+// 6
+// 7
+// 8
+// 9
+// 10
+
 #include "Player.h"
 #include "AccountMgr.h"
 #include "AchievementMgr.h"
@@ -37,6 +48,7 @@
 #include "CombatPackets.h"
 #include "Common.h"
 #include "ConditionMgr.h"
+#include "Config.h"
 #include "Containers.h"
 #include "CreatureAI.h"
 #include "DatabaseEnv.h"
@@ -104,6 +116,9 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#ifdef ELUNA
+#include "LuaEngine.h"
+#endif
 #include "WorldStatePackets.h"
 
 //npcbot
@@ -794,6 +809,11 @@ uint32 Player::EnvironmentalDamage(EnviromentalDamage type, uint32 damage)
         }
 
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_DEATHS_FROM, 1, type);
+
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+            e->OnPlayerKilledByEnvironment(this, type);
+#endif
     }
 
     return final_damage;
@@ -3582,6 +3602,11 @@ void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*
         data << uint32(spell_id);
         data << uint16(0);
         SendDirectMessage(&data);
+
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+            e->OnLearnSpell(this, spell_id);
+#endif
     }
 
     // learn all disabled higher ranks and required spells (recursive)
@@ -4629,6 +4654,10 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
     // recast lost by death auras of any items held in the inventory
     CastAllObtainSpells();
 
+#ifdef ELUNA
+    if (Eluna* e = GetEluna())
+        e->OnResurrect(this);
+#endif
     if (!applySickness)
         return;
 
@@ -5831,6 +5860,10 @@ bool Player::UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step)
                 break;
             }
         }
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+            e->OnSkillChange(this, SkillId, new_value);
+#endif
         UpdateSkillEnchantments(SkillId, SkillValue, new_value);
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_REACH_SKILL_LEVEL, SkillId);
         TC_LOG_DEBUG("entities.player.skills", "Player::UpdateSkillPro: Player '{}' ({}), SkillID: {}, Chance: {:3.1f}% taken",
@@ -6463,6 +6496,10 @@ void Player::CheckAreaExploreAndOutdoor()
 
     if (!(currFields & val))
     {
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+            e->OnDiscoverArea(this, GetAreaId());
+#endif
         SetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset, (uint32)(currFields | val));
 
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EXPLORE_AREA, GetAreaId());
@@ -7062,6 +7099,9 @@ uint32 Player::GetZoneIdFromDB(ObjectGuid guid)
 
 void Player::UpdateArea(uint32 newArea)
 {
+#ifdef ELUNA
+    uint32 oldArea = m_areaUpdateId;
+#endif
     // FFA_PVP flags are area and not zone id dependent
     // so apply them accordingly
     m_areaUpdateId = newArea;
@@ -7094,6 +7134,13 @@ void Player::UpdateArea(uint32 newArea)
         SetRestFlag(REST_FLAG_IN_FACTION_AREA);
     else
         RemoveRestFlag(REST_FLAG_IN_FACTION_AREA);
+
+#ifdef ELUNA
+    // We only want the hook to trigger when the old and new area is actually different
+    if (Eluna* e = GetEluna())
+        if(oldArea != newArea)
+            e->OnUpdateArea(this, oldArea, newArea);
+#endif
 }
 
 void Player::UpdateZone(uint32 newZone, uint32 newArea)
@@ -11860,6 +11907,15 @@ InventoryResult Player::CanUseItem(ItemTemplate const* proto) const
         if (HasSpell(proto->Spells[1].SpellId))
             return EQUIP_ERR_NONE;
 
+#ifdef ELUNA
+    if (Eluna* e = GetEluna())
+    {
+        InventoryResult eres = e->OnCanUseItem(this, proto->ItemId);
+        if (eres != EQUIP_ERR_OK)
+            return eres;
+    }
+#endif
+
     return EQUIP_ERR_OK;
 }
 
@@ -12039,6 +12095,11 @@ Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update
             stmt->setString(1, ss.str());
             CharacterDatabase.Execute(stmt);
         }
+
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+            e->OnAdd(this, pItem);
+#endif
     }
     return pItem;
 }
@@ -12283,6 +12344,13 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
 
         ApplyEquipCooldown(pItem2);
 
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+        {
+            e->OnEquip(this, pItem2, bag, slot); // This should be removed in the future
+            e->OnItemEquip(this, pItem2, slot);
+        }
+#endif
         return pItem2;
     }
 
@@ -12293,6 +12361,13 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_ITEM, pItem->GetEntry());
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_EPIC_ITEM, slot, pItem->GetEntry());
 
+#ifdef ELUNA
+    if (Eluna* e = GetEluna())
+    {
+        e->OnEquip(this, pItem, bag, slot); // This should be removed in the future
+        e->OnItemEquip(this, pItem, slot);
+    }
+#endif
     return pItem;
 }
 
@@ -12317,6 +12392,14 @@ void Player::QuickEquipItem(uint16 pos, Item* pItem)
 
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_ITEM, pItem->GetEntry());
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_EPIC_ITEM, slot, pItem->GetEntry());
+
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+        {
+            e->OnEquip(this, pItem, (pos >> 8), slot); // This should be removed in the future
+            e->OnItemEquip(this, pItem, slot);
+        }
+#endif
     }
 }
 
@@ -12425,6 +12508,10 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
                         default:
                             break;
                     }
+#ifdef ELUNA
+                    if (Eluna* e = GetEluna())
+                        e->OnItemUnEquip(this, pItem, slot);
+#endif
                 }
             }
 
@@ -12564,6 +12651,10 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
 
                 // equipment visual show
                 SetVisibleItemSlot(slot, nullptr);
+#ifdef ELUNA
+                if (Eluna* e = GetEluna())
+                    e->OnItemUnEquip(this, pItem, slot);
+#endif
             }
 
             m_items[slot] = nullptr;
@@ -14980,7 +15071,13 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
     {
         case TYPEID_UNIT:
             PlayerTalkClass->ClearMenus();
+
+#ifdef ELUNA
+            if (Eluna* e = GetEluna())
+                e->OnQuestAccept(this, questGiver->ToCreature(), quest);
+#endif
             questGiver->ToCreature()->AI()->OnQuestAccept(this, quest);
+
             break;
         case TYPEID_ITEM:
         case TYPEID_CONTAINER:
@@ -15012,7 +15109,13 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
         }
         case TYPEID_GAMEOBJECT:
             PlayerTalkClass->ClearMenus();
+
+#ifdef ELUNA
+            if (Eluna* e = GetEluna())
+                e->OnQuestAccept(this, questGiver->ToGameObject(), quest);
+#endif
             questGiver->ToGameObject()->AI()->OnQuestAccept(this, quest);
+
             break;
         default:
             break;
@@ -15229,7 +15332,7 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
                     SendNewItem(item, quest->RewardItemIdCount[i], true, false, false, false);
                 }
                 else if (quest->IsDFQuest())
-                    SendItemRetrievalMail(itemId, quest->RewardItemIdCount[i]);
+                    SendItemRetrievalMail({ { itemId, quest->RewardItemIdCount[i], GenerateItemRandomPropertyId(itemId) } });
             }
         }
     }
@@ -16133,6 +16236,10 @@ QuestGiverStatus Player::GetQuestDialogStatus(Object* questgiver)
     {
         case TYPEID_GAMEOBJECT:
         {
+#ifdef ELUNA
+            if (Eluna* e = GetEluna())
+                e->GetDialogStatus(this, questgiver->ToGameObject());
+#endif
             if (auto ai = questgiver->ToGameObject()->AI())
                 if (auto questStatus = ai->GetDialogStatus(this))
                     return *questStatus;
@@ -16142,6 +16249,10 @@ QuestGiverStatus Player::GetQuestDialogStatus(Object* questgiver)
         }
         case TYPEID_UNIT:
         {
+#ifdef ELUNA
+            if (Eluna* e = GetEluna())
+                e->GetDialogStatus(this, questgiver->ToCreature());
+#endif
             if (auto ai = questgiver->ToCreature()->AI())
                 if (auto questStatus = ai->GetDialogStatus(this))
                     return *questStatus;
@@ -24922,8 +25033,16 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
 
     if (!item || item->is_looted)
     {
-        SendEquipError(EQUIP_ERR_ALREADY_LOOTED, nullptr, nullptr);
-        return;
+        if (sConfigMgr->GetBoolDefault("AOE.LOOT.enable", true))
+        {
+            //SendEquipError(EQUIP_ERR_ALREADY_LOOTED, nullptr, nullptr); prevents error already loot from spamming
+            return;
+        }
+        else
+        {
+            SendEquipError(EQUIP_ERR_ALREADY_LOOTED, nullptr, nullptr);
+            return;
+        }
     }
 
     if (!item->AllowedForPlayer(this))
@@ -24994,6 +25113,10 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
         if (loot->containerID > 0)
             sLootItemStorage->RemoveStoredLootItemForContainer(loot->containerID, item->itemid, item->count, item->itemIndex);
 
+#ifdef ELUNA
+        if (Eluna* e = GetEluna())
+            e->OnLootItem(this, newitem, item->count, this->GetLootGUID());
+#endif
     }
     else
         SendEquipError(msg, nullptr, nullptr, item->itemid);
@@ -25409,6 +25532,11 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
 
     // update free talent points
     SetFreeTalentPoints(CurTalentPoints - (talentRank - curtalent_maxrank + 1));
+
+#ifdef ELUNA
+    if (Eluna* e = GetEluna())
+        e->OnLearnTalents(this, talentId, talentRank, spellid);
+#endif
 }
 
 void Player::LearnPetTalent(ObjectGuid petGuid, uint32 talentId, uint32 talentRank)
@@ -26410,6 +26538,7 @@ bool Player::AddItem(uint32 itemId, uint32 count)
         SendNewItem(item, count, true, false);
     else
         return false;
+
     return true;
 }
 
@@ -26536,19 +26665,34 @@ void Player::RefundItem(Item* item)
     CharacterDatabase.CommitTransaction(trans);
 }
 
-void Player::SendItemRetrievalMail(uint32 itemEntry, uint32 count)
+void Player::SendItemRetrievalMail(std::vector<std::tuple<uint32 /*entry*/, uint32 /*count*/, int32 /*randomPropertyId*/>> const& items)
 {
-    MailSender sender(MAIL_CREATURE, 34337 /* The Postmaster */);
-    MailDraft draft("Recovered Item", "We recovered a lost item in the twisting nether and noted that it was yours.$B$BPlease find said object enclosed."); // This is the text used in Cataclysm, it probably wasn't changed.
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-
-    if (Item* item = Item::CreateItem(itemEntry, count, nullptr))
+    auto it = items.begin();
+    while (it != items.end())
     {
-        item->SaveToDB(trans);
-        draft.AddItem(item);
-    }
+        MailSender sender(MAIL_CREATURE, 34337 /* The Postmaster */);
+        MailDraft draft("Recovered Item", "We recovered a lost item in the twisting nether and noted that it was yours.$B$BPlease find said object enclosed."); // This is the text used in Cataclysm, it probably wasn't changed.
 
-    draft.SendMailTo(trans, MailReceiver(this, GetGUID().GetCounter()), sender);
+        uint32 addedItemCount = 0;
+        while (it != items.end())
+        {
+            auto& [itemEntry, count, randomPropertyId] = *it;
+            if (Item* item = Item::CreateItem(itemEntry, count, nullptr))
+            {
+                if (randomPropertyId)
+                    item->SetItemRandomProperties(randomPropertyId);
+                item->SaveToDB(trans);
+                draft.AddItem(item);
+                addedItemCount++;
+            }
+            ++it;
+            if (addedItemCount >= MAX_MAIL_ITEMS)
+                break;
+        }
+
+        draft.SendMailTo(trans, MailReceiver(this, GetGUID().GetCounter()), sender);
+    }
     CharacterDatabase.CommitTransaction(trans);
 }
 

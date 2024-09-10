@@ -41,6 +41,9 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#ifdef ELUNA
+#include "LuaEngine.h"
+#endif
 
 //npcbot
 #include "botdatamgr.h"
@@ -261,6 +264,11 @@ bool Group::Create(Player* leader)
     }
     else if (!AddMember(leader))
         return false;
+
+#ifdef ELUNA
+    if (Eluna* e = leader->GetEluna())
+        e->OnCreate(this, m_leaderGuid, m_groupType);
+#endif
 
     return true;
 }
@@ -1886,7 +1894,7 @@ void Group::CountTheRoll(Rolls::iterator rollI, Map* allowedMap)
                             {
                                 LootItem* lootItem = loot.LootItemInSlot(i, player);
                                 player->SendEquipError(msg, nullptr, nullptr, lootItem->itemid);
-                                player->SendItemRetrievalMail(lootItem->itemid, lootItem->count);
+                                player->SendItemRetrievalMail({ { lootItem->itemid, static_cast<uint32>(lootItem->count), lootItem->randomPropertyId } });
                             }
                         }
                     }

@@ -1,0 +1,6 @@
+G:\Github\VisualStudio\Trinitycore-npcbots\contrib\ScriptsConverter\ScriptConverter\bin\Debug\ScriptConverter.exe
+G:\Github\VisualStudio\Trinitycore-npcbots\contrib\ScriptsConverter\ScriptConverter\bin\Debug\ScriptConverter.pdb
+G:\Github\VisualStudio\Trinitycore-npcbots\contrib\ScriptsConverter\ScriptConverter\obj\Debug\ScriptConverter.csproj.AssemblyReference.cache
+G:\Github\VisualStudio\Trinitycore-npcbots\contrib\ScriptsConverter\ScriptConverter\obj\Debug\ScriptConverter.csproj.CoreCompileInputs.cache
+G:\Github\VisualStudio\Trinitycore-npcbots\contrib\ScriptsConverter\ScriptConverter\obj\Debug\ScriptConverter.exe
+G:\Github\VisualStudio\Trinitycore-npcbots\contrib\ScriptsConverter\ScriptConverter\obj\Debug\ScriptConverter.pdb

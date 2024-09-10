@@ -21,6 +21,7 @@
 #include "CellImpl.h"
 #include "CinematicMgr.h"
 #include "Common.h"
+#include "Config.h"
 #include "Creature.h"
 #include "GameTime.h"
 #include "GridNotifiersImpl.h"
@@ -42,6 +43,10 @@
 #include "StringConvert.h"
 #include "TemporarySummon.h"
 #include "Totem.h"
+#ifdef ELUNA
+#include "LuaEngine.h"
+#include "ElunaConfig.h"
+#endif
 #include "Transport.h"
 #include "Unit.h"
 #include "UpdateFieldFlags.h"
@@ -962,6 +967,9 @@ void MovementInfo::OutDebug()
 }
 
 WorldObject::WorldObject(bool isWorldObject) : Object(), WorldLocation(), LastUsedScriptID(0),
+#ifdef ELUNA
+elunaEvents(NULL),
+#endif
 m_movementInfo(), m_name(), m_isActive(false), m_isFarVisible(false), m_isStoredInWorldObjectGridContainer(isWorldObject), m_zoneScript(nullptr),
 m_transport(nullptr), m_zoneId(0), m_areaId(0), m_staticFloorZ(VMAP_INVALID_HEIGHT), m_outdoors(false), m_liquidStatus(LIQUID_MAP_NO_WATER),
 m_currMap(nullptr), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL), m_notifyflags(0)
@@ -972,6 +980,10 @@ m_currMap(nullptr), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL), m_notifyflag
 
 WorldObject::~WorldObject()
 {
+#ifdef ELUNA
+    delete elunaEvents;
+    elunaEvents = NULL;
+#endif
     // this may happen because there are many !create/delete
     if (IsStoredInWorldObjectGridContainer() && m_currMap)
     {
@@ -1858,8 +1870,23 @@ void WorldObject::SetMap(Map* map)
     m_currMap = map;
     m_mapId = map->GetId();
     m_InstanceId = map->GetInstanceId();
+#ifdef ELUNA
+    //@todo: possibly look into cleanly clearing all pending events from previous map's event mgr.
+
+    // if multistate, delete elunaEvents and set to nullptr. events shouldn't move across states.
+    // in single state, the timed events should move across maps
+    if (!sElunaConfig->IsElunaCompatibilityMode())
+    {
+        delete elunaEvents;
+        elunaEvents = nullptr; // set to null in case map doesn't use eluna
+    }
+
+    if (Eluna* e = map->GetEluna())
+        if (!elunaEvents)
+            elunaEvents = new ElunaEventProcessor(e, this);
+#endif
     if (IsStoredInWorldObjectGridContainer())
-        m_currMap->AddWorldObject(this);
+       m_currMap->AddWorldObject(this);
 }
 
 void WorldObject::ResetMap()
@@ -1868,6 +1895,7 @@ void WorldObject::ResetMap()
     ASSERT(!IsInWorld());
     if (IsStoredInWorldObjectGridContainer())
         m_currMap->RemoveWorldObject(this);
+
     m_currMap = nullptr;
     //maybe not for corpse
     //m_mapId = 0;
@@ -3368,6 +3396,14 @@ void WorldObject::GetCreatureListWithEntryInGrid(Container& creatureContainer, u
 }
 
 template <typename Container>
+void WorldObject::GetDeadCreatureListInGrid(Container& creaturedeadContainer, float maxSearchRange, bool alive /*= false*/) const
+{
+    Trinity::AllDeadCreaturesInRange check(this, maxSearchRange, alive);
+    Trinity::CreatureListSearcher<Trinity::AllDeadCreaturesInRange> searcher(this, creaturedeadContainer, check);
+    Cell::VisitGridObjects(this, searcher, maxSearchRange);
+}
+
+template <typename Container>
 void WorldObject::GetPlayerListInGrid(Container& playerContainer, float maxSearchRange, bool alive /*= true*/) const
 {
     Trinity::AnyPlayerInObjectRangeCheck checker(this, maxSearchRange, alive);
@@ -3816,6 +3852,16 @@ std::string WorldObject::GetDebugInfo() const
     return sstr.str();
 }
 
+#ifdef ELUNA
+Eluna* WorldObject::GetEluna() const
+{
+    if (const Map * map = FindMap())
+        return map->GetEluna();
+
+    return nullptr;
+}
+#endif
+
 template TC_GAME_API void WorldObject::GetGameObjectListWithEntryInGrid(std::list<GameObject*>&, uint32, float) const;
 template TC_GAME_API void WorldObject::GetGameObjectListWithEntryInGrid(std::deque<GameObject*>&, uint32, float) const;
 template TC_GAME_API void WorldObject::GetGameObjectListWithEntryInGrid(std::vector<GameObject*>&, uint32, float) const;
@@ -3823,6 +3869,10 @@ template TC_GAME_API void WorldObject::GetGameObjectListWithEntryInGrid(std::vec
 template TC_GAME_API void WorldObject::GetCreatureListWithEntryInGrid(std::list<Creature*>&, uint32, float) const;
 template TC_GAME_API void WorldObject::GetCreatureListWithEntryInGrid(std::deque<Creature*>&, uint32, float) const;
 template TC_GAME_API void WorldObject::GetCreatureListWithEntryInGrid(std::vector<Creature*>&, uint32, float) const;
+
+template TC_GAME_API void WorldObject::GetDeadCreatureListInGrid(std::list<Creature*>&, float, bool) const;
+template TC_GAME_API void WorldObject::GetDeadCreatureListInGrid(std::deque<Creature*>&, float, bool) const;
+template TC_GAME_API void WorldObject::GetDeadCreatureListInGrid(std::vector<Creature*>&, float, bool) const;
 
 template TC_GAME_API void WorldObject::GetPlayerListInGrid(std::list<Player*>&, float, bool) const;
 template TC_GAME_API void WorldObject::GetPlayerListInGrid(std::deque<Player*>&, float, bool) const;

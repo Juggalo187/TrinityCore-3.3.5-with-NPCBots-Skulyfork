@@ -19,6 +19,96 @@
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
+
+// 1
+// 2
+// 3
+// 4
+// 5
+// 6
+// 7
+// 8
+// 9
+// 10
+// 11
+// 12
+// 13
+// 14
+// 15
+// 16
+// 17
+// 18
+// 19
+// 20
+// 21
+// 22
+// 23
+// 24
+// 25
+// 26
+// 27
+// 28
+// 29
+// 30
+// 31
+// 32
+// 33
+// 34
+// 35
+// 36
+// 37
+// 38
+// 39
+// 40
+void Add_paymaster_npc();
+void AddSC_npc_1v1arena();
+void AddSC_skip_StarterArea();
+void AddSC_racial_traits_npc();
+
 void AddCustomScripts()
 {
+    // 1
+    // 2
+    // 3
+    // 4
+    // 5
+    // 6
+    // 7
+    // 8
+    // 9
+    // 10
+    // 11
+    // 12
+    // 13
+    // 14
+    // 15
+    // 16
+    // 17
+    // 18
+    // 19
+    // 20
+    // 21
+    // 22
+    // 23
+    // 24
+    // 25
+    // 26
+    // 27
+    // 28
+    // 29
+    // 30
+    // 31
+    // 32
+    // 33
+    // 34
+    // 35
+    // 36
+    // 37
+    // 38
+    // 39
+    // 40
+    Add_paymaster_npc();
+	AddSC_npc_1v1arena();
+	AddSC_skip_StarterArea();
+	AddSC_racial_traits_npc();
 }
