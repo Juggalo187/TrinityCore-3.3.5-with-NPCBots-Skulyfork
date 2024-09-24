@@ -122,6 +122,8 @@ find_path(MYSQL_INCLUDE_DIR
     /usr/local/include
     /usr/local/include/mysql
     /usr/local/mysql/include
+	"${PROGRAM_FILES_64}/MySQL/MySQL Server 9.0"
+	"${PROGRAM_FILES_64}/MySQL/MySQL Server 8.4"
     "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.3"
     "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.2"
     "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.1"
@@ -188,6 +190,8 @@ if(WIN32)
       ${_MYSQL_ROOT_HINTS}
     PATHS
       ${MYSQL_ADD_LIBRARIES_PATH}
+	  "${PROGRAM_FILES_64}/MySQL/MySQL Server 9.0"
+	  "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.4"
       "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.3"
       "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.2"
       "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.1"
@@ -263,6 +267,8 @@ if(WIN32)
     HINTS
       ${_MYSQL_ROOT_HINTS}
     PATHS
+	  "${PROGRAM_FILES_64}/MySQL/MySQL Server 9.0"
+	  "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.4"
       "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.3"
       "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.2"
       "${PROGRAM_FILES_64}/MySQL/MySQL Server 8.1"
