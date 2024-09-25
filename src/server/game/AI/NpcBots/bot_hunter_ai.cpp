@@ -1169,7 +1169,7 @@ public:
             if (lvl >= 20 && (baseId == AIMED_SHOT_1 || baseId == ARCANE_SHOT_1 || baseId == CHIMERA_SHOT_1))
             {
                 if (AuraEffect const* rapi = me->GetAuraEffect(RAPID_KILLING_BUFF, 0))
-                    if (rapi->IsAffectingSpell(spellInfo))
+                    if (rapi->IsAffectedOnSpell(spellInfo))
                         pctbonus += 0.2f;
             }
             //Barrage: 12% bonus damage for Aimed Shot, Multi-Shot or Volley
@@ -1206,8 +1206,8 @@ public:
             {
                 if (Aura const* snip = me->GetAura(SNIPER_TRAINING_BUFF))
                 {
-                    if (snip->GetEffect(0)->IsAffectingSpell(spellInfo) ||
-                        snip->GetEffect(1)->IsAffectingSpell(spellInfo))
+                    if (snip->GetEffect(0)->IsAffectedOnSpell(spellInfo) ||
+                        snip->GetEffect(1)->IsAffectedOnSpell(spellInfo))
                         pctbonus += 0.06f;
                 }
             }
@@ -1215,7 +1215,7 @@ public:
             if (baseId == AIMED_SHOT_1 || baseId == ARCANE_SHOT_1 || baseId == CHIMERA_SHOT_1)
             {
                 if (AuraEffect const* stea = me->GetAuraEffect(IMPROVED_STEADY_SHOT_BUFF, 0))
-                    if (stea->IsAffectingSpell(spellInfo))
+                    if (stea->IsAffectedOnSpell(spellInfo))
                         pctbonus += 0.15f;
             }
 
@@ -1272,7 +1272,7 @@ public:
             if (baseId == ARCANE_SHOT_1 || baseId == EXPLOSIVE_SHOT_1)
             {
                 AuraEffect const* lock = me->GetAuraEffect(LOCK_AND_LOAD_BUFF, 0);
-                if (lock && lock->IsAffectingSpell(spellInfo))
+                if (lock && lock->IsAffectedOnSpell(spellInfo))
                     pctbonus += 1.0f;
             }
 
@@ -1302,7 +1302,7 @@ public:
             if (baseId == AIMED_SHOT_1 || baseId == ARCANE_SHOT_1 || baseId == CHIMERA_SHOT_1)
             {
                 if (AuraEffect const* stea = me->GetAuraEffect(IMPROVED_STEADY_SHOT_BUFF, 1))
-                    if (stea->IsAffectingSpell(spellInfo))
+                    if (stea->IsAffectedOnSpell(spellInfo))
                         pctbonus += 0.2f;
             }
 
@@ -1364,7 +1364,7 @@ public:
             if (baseId == ARCANE_SHOT_1 || baseId == EXPLOSIVE_SHOT_1)
             {
                 AuraEffect const* lock = me->GetAuraEffect(LOCK_AND_LOAD_BUFF, 0);
-                if (lock && lock->IsAffectingSpell(spellInfo))
+                if (lock && lock->IsAffectedOnSpell(spellInfo))
                     pctbonus += 1.0f;
             }
 
@@ -1479,7 +1479,7 @@ public:
             if (baseId == AIMED_SHOT_1 || baseId == ARCANE_SHOT_1 || baseId == CHIMERA_SHOT_1)
             {
                 if (AuraEffect const* rapi = me->GetAuraEffect(RAPID_KILLING_BUFF, 0))
-                    if (rapi->IsAffectingSpell(spellInfo))
+                    if (rapi->IsAffectedOnSpell(spellInfo))
                         me->RemoveAura(RAPID_KILLING_BUFF);
             }
             //Glyph of Arcane Shot
@@ -1503,7 +1503,7 @@ public:
             if (baseId == ARCANE_SHOT_1 || baseId == EXPLOSIVE_SHOT_1)
             {
                 AuraEffect const* lock = me->GetAuraEffect(LOCK_AND_LOAD_BUFF, 0);
-                if (lock && lock->IsAffectingSpell(spellInfo))
+                if (lock && lock->IsAffectedOnSpell(spellInfo))
                     lock->GetBase()->DropCharge();
             }
             if (baseId == READINESS_1)
@@ -1526,7 +1526,7 @@ public:
             if (baseId == AIMED_SHOT_1 || baseId == ARCANE_SHOT_1 || baseId == CHIMERA_SHOT_1)
             {
                 if (AuraEffect const* stea = me->GetAuraEffect(IMPROVED_STEADY_SHOT_BUFF, 0))
-                    if (stea->IsAffectingSpell(spellInfo))
+                    if (stea->IsAffectedOnSpell(spellInfo))
                         me->RemoveAurasDueToSpell(IMPROVED_STEADY_SHOT_BUFF);
             }
 

@@ -483,7 +483,7 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
                 Unit::AuraEffectList const& overrideClassScripts = caster->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
                 for (Unit::AuraEffectList::const_iterator itr = overrideClassScripts.begin(); itr != overrideClassScripts.end(); ++itr)
                 {
-                    if ((*itr)->IsAffectingSpell(m_spellInfo))
+                    if ((*itr)->IsAffectedOnSpell(m_spellInfo))
                     {
                         // Glyph of Fear, Glyph of Frost nova and similar auras
                         if ((*itr)->GetMiscValue() == 7801)
@@ -845,7 +845,7 @@ float AuraEffect::GetCritChanceFor(Unit const* caster, Unit const* target) const
     return target->SpellCritChanceTaken(caster, GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), GetBase()->GetCritChance(), GetSpellInfo()->GetAttackType(), true);
 }
 
-bool AuraEffect::IsAffectingSpell(SpellInfo const* spell) const
+bool AuraEffect::IsAffectedOnSpell(SpellInfo const* spell) const
 {
     if (!spell)
         return false;
@@ -1171,9 +1171,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
 
         if (target->GetTypeId() == TYPEID_PLAYER)
         {
-            Player* plrTarget = target->ToPlayer();
-
-            PlayerSpellMap const& sp_list = plrTarget->GetSpellMap();
+            PlayerSpellMap const& sp_list = target->ToPlayer()->GetSpellMap();
             for (auto itr = sp_list.begin(); itr != sp_list.end(); ++itr)
             {
                 if (itr->second.state == PLAYERSPELL_REMOVED || itr->second.disabled)
@@ -1193,7 +1191,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             // Also do it for Glyphs
             for (uint32 i = 0; i < MAX_GLYPH_SLOT_INDEX; ++i)
             {
-                if (uint32 glyphId = plrTarget->GetGlyph(plrTarget->GetActiveSpec(), i))
+                if (uint32 glyphId = target->ToPlayer()->GetGlyph(i))
                 {
                     if (GlyphPropertiesEntry const* glyph = sGlyphPropertiesStore.LookupEntry(glyphId))
                     {
@@ -1208,21 +1206,19 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             }
 
             // Leader of the Pack
-            if (plrTarget->HasSpell(17007))
+            if (target->ToPlayer()->HasSpell(17007))
             {
                 SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(24932);
                 if (spellInfo && spellInfo->Stances & (UI64LIT(1) << (GetMiscValue() - 1)))
                     target->CastSpell(target, 24932, this);
             }
-
             // Improved Barkskin - apply/remove armor bonus due to shapeshift
-            if (plrTarget->HasSpell(63410) || plrTarget->HasSpell(63411))
+            if (target->ToPlayer()->HasSpell(63410) || target->ToPlayer()->HasSpell(63411))
             {
                 target->RemoveAurasDueToSpell(66530);
                 if (GetMiscValue() == FORM_TRAVEL || GetMiscValue() == FORM_NONE) // "while in Travel Form or while not shapeshifted"
                     target->CastSpell(target, 66530, true);
             }
-
             // Heart of the Wild
             if (HotWSpellId)
             {   // hacky, but the only way as spell family is not SPELLFAMILY_DRUID
@@ -2598,17 +2594,17 @@ void AuraEffect::HandleAuraModSkill(AuraApplication const* aurApp, uint8 mode, b
 {
     if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_SKILL)))
         return;
+    Unit* target = aurApp->GetTarget();
 
-    Player* target = aurApp->GetTarget()->ToPlayer();
-    if (!target)
+    if (target->GetTypeId() != TYPEID_PLAYER)
         return;
 
     uint32 prot = GetMiscValue();
     int32 points = GetAmount();
 
-    target->ModifySkillBonus(prot, ((apply) ? points: -points), GetAuraType() == SPELL_AURA_MOD_SKILL_TALENT);
+    target->ToPlayer()->ModifySkillBonus(prot, ((apply) ? points: -points), GetAuraType() == SPELL_AURA_MOD_SKILL_TALENT);
     if (prot == SKILL_DEFENSE)
-        target->UpdateDefenseBonusesMod();
+        target->ToPlayer()->UpdateDefenseBonusesMod();
 }
 
 /****************************/
@@ -5027,7 +5023,7 @@ void AuraEffect::HandleAuraSetVehicle(AuraApplication const* aurApp, uint8 mode,
 
     Unit* target = aurApp->GetTarget();
 
-    if (!target->IsInWorld())
+    if (target->GetTypeId() != TYPEID_PLAYER || !target->IsInWorld())
         return;
 
     uint32 vehicleId = GetMiscValue();
@@ -5039,9 +5035,6 @@ void AuraEffect::HandleAuraSetVehicle(AuraApplication const* aurApp, uint8 mode,
     }
     else if (target->GetVehicleKit())
         target->RemoveVehicleKit();
-
-    if (target->GetTypeId() != TYPEID_PLAYER)
-        return;
 
     WorldPacket data(SMSG_PLAYER_VEHICLE_DATA, target->GetPackGUID().size()+4);
     data << target->GetPackGUID();

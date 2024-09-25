@@ -839,11 +839,15 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     pCurrChar->SendInitialPacketsAfterAddToMap();
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
+
     stmt->setUInt32(0, pCurrChar->GetGUID().GetCounter());
+
     CharacterDatabase.Execute(stmt);
 
     LoginDatabasePreparedStatement* loginStmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_ACCOUNT_ONLINE);
+
     loginStmt->setUInt32(0, GetAccountId());
+
     LoginDatabase.Execute(loginStmt);
 
     pCurrChar->SetInGameTime(GameTime::GetGameTimeMS());
@@ -866,7 +870,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
 
     // setting Ghost+speed if dead
     if (pCurrChar->m_deathState == DEAD)
-        pCurrChar->SetWaterWalking(true);
+        pCurrChar->SetMovement(MOVE_WATER_WALK);
 
     pCurrChar->ContinueTaxiFlight();
 
@@ -1342,7 +1346,7 @@ void WorldSession::HandleRemoveGlyph(WorldPacket& recvData)
         return;
     }
 
-    if (uint32 glyph = _player->GetGlyph(_player->GetActiveSpec(), slot))
+    if (uint32 glyph = _player->GetGlyph(slot))
     {
         if (GlyphPropertiesEntry const* gp = sGlyphPropertiesStore.LookupEntry(glyph))
         {

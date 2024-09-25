@@ -327,7 +327,7 @@ public:
             //if (baseId == AIMED_SHOT_1 || baseId == ARCANE_SHOT_1 || baseId == CHIMERA_SHOT_1)
             //{
             //    if (AuraEffect const* rapi = me->GetAuraEffect(RAPID_KILLING_BUFF, 0))
-            //        if (rapi->IsAffectingSpell(spellInfo))
+            //        if (rapi->IsAffectedOnSpell(spellInfo))
             //            me->RemoveAura(RAPID_KILLING_BUFF);
             //}
         }

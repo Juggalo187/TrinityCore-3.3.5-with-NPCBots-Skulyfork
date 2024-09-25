@@ -338,9 +338,12 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPackets::Query::QueryItemSin
 
 void WorldSession::HandleReadItem(WorldPacket& recvData)
 {
+    //TC_LOG_DEBUG("network", "WORLD: CMSG_READ_ITEM");
+
     uint8 bag, slot;
     recvData >> bag >> slot;
 
+    //TC_LOG_INFO("network", "STORAGE: Read bag = {}, slot = {}", bag, slot);
     Item* pItem = _player->GetItemByPos(bag, slot);
 
     if (pItem && pItem->GetTemplate()->PageText)
@@ -350,7 +353,7 @@ void WorldSession::HandleReadItem(WorldPacket& recvData)
         InventoryResult msg = _player->CanUseItem(pItem);
         if (msg == EQUIP_ERR_OK)
         {
-            data.Initialize(SMSG_READ_ITEM_OK, 8);
+            data.Initialize (SMSG_READ_ITEM_OK, 8);
             TC_LOG_INFO("network", "STORAGE: Item page sent");
         }
         else
@@ -1151,15 +1154,15 @@ void WorldSession::HandleCancelTempEnchantmentOpcode(WorldPacket& recvData)
 {
     TC_LOG_DEBUG("network", "WORLD: CMSG_CANCEL_TEMP_ENCHANTMENT");
 
-    uint32 slot;
+    uint32 eslot;
 
-    recvData >> slot;
+    recvData >> eslot;
 
     // apply only to equipped item
-    if (!Player::IsEquipmentPos(INVENTORY_SLOT_BAG_0, slot))
+    if (!Player::IsEquipmentPos(INVENTORY_SLOT_BAG_0, eslot))
         return;
 
-    Item* item = GetPlayer()->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+    Item* item = GetPlayer()->GetItemByPos(INVENTORY_SLOT_BAG_0, eslot);
 
     if (!item)
         return;

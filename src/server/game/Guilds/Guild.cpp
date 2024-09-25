@@ -2344,11 +2344,6 @@ bool Guild::ChangeMemberRank(CharacterDatabaseTransaction trans, ObjectGuid guid
     return false;
 }
 
-bool Guild::IsMember(ObjectGuid guid) const
-{
-    return m_members.find(guid.GetCounter()) != m_members.end();
-}
-
 uint64 Guild::GetMemberAvailableMoneyForRepairItems(ObjectGuid guid) const
 {
     Member const* member = GetMember(guid);
