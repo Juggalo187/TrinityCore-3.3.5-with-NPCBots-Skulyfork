@@ -1549,7 +1549,9 @@ void ScriptMgr::OnPlayerLeaveMap(Map* map, Player* player)
     if(Eluna * e = map->GetEluna())
         e->OnPlayerLeave(map, player);
 #endif
+
     FOREACH_SCRIPT(AllMapScript)->OnPlayerLeaveAll(map, player);
+
     SCR_MAP_BGN(WorldMapScript, map, itr, end, entry, IsWorldMap);
         itr->second->OnPlayerLeave(map, player);
     SCR_MAP_END;
@@ -1578,6 +1580,7 @@ void ScriptMgr::OnMapUpdate(Map* map, uint32 diff)
 #endif
 
     FOREACH_SCRIPT(AllMapScript)->OnAllUpdate(map, diff);
+
     SCR_MAP_BGN(WorldMapScript, map, itr, end, entry, IsWorldMap);
         itr->second->OnUpdate(map, diff);
     SCR_MAP_END;
