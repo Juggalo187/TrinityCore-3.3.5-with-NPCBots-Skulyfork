@@ -65,11 +65,9 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
-
 //npcbot
 #include "botmgr.h"
 //end npcbot
-
 
 #ifdef ELUNA
 #include "LuaEngine.h"
