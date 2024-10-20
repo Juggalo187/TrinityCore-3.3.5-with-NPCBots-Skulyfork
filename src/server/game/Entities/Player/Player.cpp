@@ -1375,9 +1375,7 @@ void Player::Update(uint32 p_time)
             m_hostileReferenceCheckTimer -= p_time;
     }
 
-    //we should execute delayed teleports only for alive(!) players
-    //because we don't want player's ghost teleported from graveyard
-    if (IsHasDelayedTeleport() && IsAlive())
+    if (IsHasDelayedTeleport())
         TeleportTo(m_teleport_dest, m_teleport_options);
 
     //NpcBot mod: Update
@@ -4453,9 +4451,10 @@ void Player::DeleteFromDB(ObjectGuid playerguid, uint32 accountId, bool updateRe
 
             Corpse::DeleteFromDB(playerguid, trans);
 
-            //npcbot - erase npcbots
+            //npcbot - erase npcbots and manager data
             uint32 newOwner = 0;
             BotDataMgr::UpdateNpcBotDataAll(guid, NPCBOT_UPDATE_OWNER, &newOwner);
+            BotDataMgr::EraseNpcBotMgrData(playerguid);
             //end npcbot
 
             break;
@@ -18055,6 +18054,10 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
 
     _LoadEquipmentSets(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS));
 
+    //npcbots: load BotManager data
+    _botMgr->LoadData();
+    //end npcbots
+
     return true;
 }
 
@@ -19765,8 +19768,9 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
     if (Pet* pet = GetPet())
         pet->SavePetToDB(PET_SAVE_AS_CURRENT);
 
-    //npcbot: save stored items
+    //npcbot: save player-related npcbot data
     BotDataMgr::SaveNpcBotStoredGear(GetGUID(), trans);
+    BotDataMgr::SaveNpcBotMgrData(GetGUID(), trans);
     //end npcbot
 }
 

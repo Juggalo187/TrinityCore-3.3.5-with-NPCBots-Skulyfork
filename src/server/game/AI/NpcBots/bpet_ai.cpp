@@ -447,6 +447,8 @@ uint32 bot_pet_ai::GetData(uint32 data) const
     {
         case BOTPETAI_MISC_DURATION:
             return 0;
+        case BOTPETAI_MISC_DURATION_MAX:
+            return 0;
         case BOTPETAI_MISC_MAXLEVEL:
             return petOwner->GetLevel();
         case BOTPETAI_MISC_FIXEDLEVEL:
@@ -1537,7 +1539,7 @@ Unit* bot_pet_ai::_getTarget(bool &reset) const
         return u;
     }
 
-    uint8 followdist = IAmFree() ? BotMgr::GetBotFollowDistDefault() : petOwner->GetBotOwner()->GetBotMgr()->GetBotFollowDist();
+    uint8 followdist = IAmFree() ? BotMgr::GetBotFollowDistMax() : petOwner->GetBotOwner()->GetBotMgr()->GetBotFollowDist();
 
     if (followdist == 0)
         return nullptr;
@@ -1604,7 +1606,7 @@ bool bot_pet_ai::CheckAttackTarget()
 //Ranged attack position
 void bot_pet_ai::CalculateAttackPos(Unit* target, Position& pos) const
 {
-    uint8 followdist = IAmFree() ? BotMgr::GetBotFollowDistDefault() : petOwner->GetBotOwner()->GetBotMgr()->GetBotFollowDist();
+    uint8 followdist = IAmFree() ? BotMgr::GetBotFollowDistMax() : petOwner->GetBotOwner()->GetBotMgr()->GetBotFollowDist();
     uint8 rangeMode = IAmFree() ? uint8(BOT_ATTACK_RANGE_LONG) : petOwner->GetBotOwner()->GetBotMgr()->GetBotAttackRangeMode();
     uint8 exactRange = rangeMode != BOT_ATTACK_RANGE_EXACT || IAmFree() ? 255 : petOwner->GetBotOwner()->GetBotMgr()->GetBotExactAttackRange();
     Position ppos;
@@ -1665,7 +1667,7 @@ void bot_pet_ai::GetInPosition(bool force, Unit* newtarget, Position* mypos)
         return;
     }
 
-    uint8 followdist = IAmFree() ? BotMgr::GetBotFollowDistDefault() : petOwner->GetBotOwner()->GetBotMgr()->GetBotFollowDist();
+    uint8 followdist = IAmFree() ? BotMgr::GetBotFollowDistMax() : petOwner->GetBotOwner()->GetBotMgr()->GetBotFollowDist();
     if (!IsPetMelee())
     {
         //do not allow constant runaway from player

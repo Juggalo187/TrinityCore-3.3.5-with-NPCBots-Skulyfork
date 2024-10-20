@@ -385,6 +385,11 @@ inline Creature* GetClosestCreatureWithEntry(WorldObject* source, uint32 entry, 
     return source->FindNearestCreature(entry, maxSearchRange, alive);
 }
 
+inline Creature* GetClosestCreatureWithOptions(WorldObject* source, float maxSearchRange, FindCreatureOptions const& options)
+{
+    return source->FindNearestCreatureWithOptions(maxSearchRange, options);
+}
+
 inline GameObject* GetClosestGameObjectWithEntry(WorldObject* source, uint32 entry, float maxSearchRange, bool spawnedOnly = true)
 {
     return source->FindNearestGameObject(entry, maxSearchRange, spawnedOnly);
@@ -397,9 +402,9 @@ inline void GetCreatureListWithEntryInGrid(Container& container, WorldObject* so
 }
 
 template <typename Container>
-inline void GetDeadCreatureListInGrid(Container& container, WorldObject* source, float maxSearchRange, bool alive = false)
+inline void GetCreatureListWithOptionsInGrid(Container& container, WorldObject* source, float maxSearchRange, FindCreatureOptions const& options)
 {
-    source->GetDeadCreatureListInGrid(container, maxSearchRange, alive);
+    source->GetCreatureListWithOptionsInGrid(container, maxSearchRange, options);
 }
 
 template <typename Container>

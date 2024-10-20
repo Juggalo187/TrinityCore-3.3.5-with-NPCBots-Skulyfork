@@ -84,6 +84,7 @@ bool _enableNpcBotsRaids;
 bool _enableNpcBotsBGs;
 bool _enableNpcBotsArenas;
 bool _enableDungeonFinder;
+bool _enableNpcBotsPremade;
 bool _limitNpcBotsDungeons;
 bool _limitNpcBotsRaids;
 bool _hideSpawns;
@@ -146,6 +147,8 @@ bool _enableConfigLevelCapBGFirst;
 bool _bothk_enable;
 bool _bothk_message_enable;
 bool _bothk_achievements_enable;
+bool _untarget_wnpc_questgiver;
+bool _untarget_wnpc_flightmaster;
 float _botStatLimits_dodge;
 float _botStatLimits_parry;
 float _botStatLimits_block;
@@ -264,21 +267,21 @@ void AddNpcBotScripts()
 
 BotMgr::BotMgr(Player* const master) : _owner(master), _dpstracker(new DPSTracker())
 {
-    //LoadConfig(); already loaded (MapManager.cpp)
-    _followdist = _basefollowdist;
-    _exactAttackRange = 0;
-    _attackRangeMode = BOT_ATTACK_RANGE_SHORT;
-    _attackAngleMode = BOT_ATTACK_ANGLE_NORMAL;
-    _allowCombatPositioning = true;
-    _npcBotEngageDelayDPS = _npcBotEngageDelayDPS_default;
-    _npcBotEngageDelayHeal = _npcBotEngageDelayHeal_default;
-
-    _botsHidden = false;
     _quickrecall = false;
+    _data = nullptr;
 }
 BotMgr::~BotMgr()
 {
+    if (_data)
+        _data->flags &= NPCBOT_MGR_FLAG_MASK_ALL_DB_ALLOWED;
+
     delete _dpstracker;
+}
+
+void BotMgr::LoadData()
+{
+    ASSERT(!_data, "Trying to load player %u data a second time", _owner->GetGUID().GetCounter());
+    _data = BotDataMgr::SelectOrCreateNpcBotMgrData(_owner->GetGUID());
 }
 
 void BotMgr::Initialize()
@@ -292,6 +295,7 @@ void BotMgr::Initialize()
     BotDataMgr::CreateWanderingBotsSortedGear();
     BotDataMgr::LoadNpcBotGroupData();
     BotDataMgr::LoadNpcBotGearStorage();
+    BotDataMgr::LoadNpcBotMgrData();
     BotDataMgr::DeleteOldLogs();
 
     ResolveConfigConflicts();
@@ -357,6 +361,7 @@ void BotMgr::LoadConfig(bool reload)
     _enableNpcBotsBGs               = sConfigMgr->GetBoolDefault("NpcBot.Enable.BG", false);
     _enableNpcBotsArenas            = sConfigMgr->GetBoolDefault("NpcBot.Enable.Arena", false);
     _enableDungeonFinder            = sConfigMgr->GetBoolDefault("NpcBot.Enable.DungeonFinder", true);
+    _enableNpcBotsPremade           = sConfigMgr->GetBoolDefault("NpcBot.Premade.Enable", false);
     _limitNpcBotsDungeons           = sConfigMgr->GetBoolDefault("NpcBot.Limit.Dungeon", true);
     _limitNpcBotsRaids              = sConfigMgr->GetBoolDefault("NpcBot.Limit.Raid", true);
     _hideSpawns                     = sConfigMgr->GetBoolDefault("NpcBot.HideSpawns", false);
@@ -417,6 +422,8 @@ void BotMgr::LoadConfig(bool reload)
     _enableclass_wander_necromancer = sConfigMgr->GetBoolDefault("NpcBot.WanderingBots.Classes.Necromancer.Enable", true);
     _enableclass_wander_seawitch    = sConfigMgr->GetBoolDefault("NpcBot.WanderingBots.Classes.SeaWitch.Enable", true);
     _enableclass_wander_cryptlord   = sConfigMgr->GetBoolDefault("NpcBot.WanderingBots.Classes.CryptLord.Enable", true);
+    _untarget_wnpc_questgiver       = sConfigMgr->GetBoolDefault("NpcBot.WanderingBots.SkipTarget.Questgiver", false);
+    _untarget_wnpc_flightmaster     = sConfigMgr->GetBoolDefault("NpcBot.WanderingBots.SkipTarget.Flightmaster", false);
     _enrageOnDismiss                = sConfigMgr->GetBoolDefault("NpcBot.EnrageOnDismiss", true);
     _botStatLimits                  = sConfigMgr->GetBoolDefault("NpcBot.Stats.Limits.Enable", false);
     _botStatLimits_dodge            = sConfigMgr->GetFloatDefault("NpcBot.Stats.Limits.Dodge", 95.0f);
@@ -708,6 +715,11 @@ bool BotMgr::IsNpcBotDungeonFinderEnabled()
     return _enableDungeonFinder;
 }
 
+bool BotMgr::IsNpcBotsPremadeEnabled()
+{
+    return _enableNpcBotsPremade;
+}
+
 bool BotMgr::DisplayEquipment()
 {
     return _displayEquipment;
@@ -846,6 +858,15 @@ bool BotMgr::IsWanderingClassEnabled(uint8 m_class)
         default:
             return true;
     }
+}
+
+bool BotMgr::EnableWanderingUntargetNpcQuestgiver()
+{
+    return _untarget_wnpc_questgiver;
+}
+bool BotMgr::EnableWanderingUntargetNpcFlightmaster()
+{
+    return _untarget_wnpc_flightmaster;
 }
 
 bool BotMgr::HideBotSpawns()
@@ -1136,7 +1157,7 @@ void BotMgr::Update(uint32 diff)
     if (_quickrecall)
     {
         _quickrecall = false;
-        _botsHidden = false;
+        _data->RemoveFlag(NPCBOT_MGR_FLAG_HIDE_BOTS);
     }
 }
 
@@ -1162,7 +1183,7 @@ bool BotMgr::RestrictBots(Creature const* bot, bool add) const
     if (_owner->IsInFlight())
         return true;
 
-    if (_botsHidden)
+    if (_data->HasFlag(NPCBOT_MGR_FLAG_HIDE_BOTS))
         return true;
 
     Map const* currMap = _owner->GetMap();
@@ -1530,6 +1551,7 @@ void BotMgr::_teleportBot(Creature* bot, Map* newMap, float x, float y, float z,
             bot->SetMap(newMap);
             if (!bot->IsWandererBot() && !botai->CanAppearInWorld())
             {
+                botai->AbortTeleport();
                 TeleportFinishEvent* delayedTeleportEvent = new TeleportFinishEvent(botai, reset);
                 std::chrono::milliseconds delay(urand(5000, 8000));
                 botai->GetEvents()->AddEvent(delayedTeleportEvent, botai->GetEvents()->CalculateTime(delay));
@@ -1596,13 +1618,12 @@ void BotMgr::_teleportBot(Creature* bot, Map* newMap, float x, float y, float z,
             return;
         }
 
-        botai->AbortTeleport();
-
         //update group member online state
         if (Group* gr = bot->GetBotOwner()->GetGroup())
             if (gr->IsMember(bot->GetGUID()))
                 gr->SendUpdate();
 
+        botai->AbortTeleport();
         TeleportFinishEvent* finishEvent = new TeleportFinishEvent(botai, reset);
         std::chrono::milliseconds delay(quick ? urand(500, 1500) : urand(5000, 8000));
         botai->GetEvents()->AddEvent(finishEvent, botai->GetEvents()->CalculateTime(delay));
@@ -2187,7 +2208,7 @@ void BotMgr::RecallAllBots(bool teleport)
 {
     if (teleport)
     {
-        _botsHidden = true;
+        _data->SetFlag(NPCBOT_MGR_FLAG_HIDE_BOTS);
         _quickrecall = true;
     }
     else
@@ -2570,6 +2591,71 @@ void BotMgr::SetBotPetAuraUpdateMaskForRaid(Creature const* botpet, uint8 slot)
 void BotMgr::ResetBotPetAuraUpdateMaskForRaid(Creature const* botpet)
 {
     botpet->GetBotPetAI()->ResetAuraUpdateMaskForRaid();
+}
+
+uint8 BotMgr::GetBotFollowDist() const
+{
+    return _data->dist_follow;
+}
+void BotMgr::SetBotFollowDist(uint8 dist)
+{
+    _data->dist_follow = dist;
+}
+
+void BotMgr::_setBotExactAttackRange(uint8 exactRange)
+{
+    _data->dist_attack = exactRange;
+}
+
+uint8 BotMgr::GetBotExactAttackRange() const
+{
+    return _data->dist_attack;
+}
+uint8 BotMgr::GetBotAttackRangeMode() const
+{
+    return _data->attack_range_mode;
+}
+void BotMgr::SetBotAttackRangeMode(uint8 mode, uint8 exactRange)
+{
+    _data->attack_range_mode = mode; _setBotExactAttackRange(exactRange);
+}
+
+uint8 BotMgr::GetBotAttackAngleMode() const
+{
+    return _data->attack_angle_mode;
+}
+void BotMgr::SetBotAttackAngleMode(uint8 mode)
+{
+    _data->attack_angle_mode = mode;
+}
+
+bool BotMgr::GetBotAllowCombatPositioning() const
+{
+    return !_data->HasFlag(NPCBOT_MGR_FLAG_DISABLE_COMBAT_POSITIONING);
+}
+void BotMgr::SetBotAllowCombatPositioning(bool allow)
+{
+    allow ? _data->RemoveFlag(NPCBOT_MGR_FLAG_DISABLE_COMBAT_POSITIONING) : _data->SetFlag(NPCBOT_MGR_FLAG_DISABLE_COMBAT_POSITIONING);
+}
+
+void BotMgr::SetBotsHidden(bool hidden)
+{
+    hidden ? _data->SetFlag(NPCBOT_MGR_FLAG_HIDE_BOTS) : _data->RemoveFlag(NPCBOT_MGR_FLAG_HIDE_BOTS);
+}
+
+uint32 BotMgr::GetEngageDelayDPS() const
+{
+    return _data->engage_delay_dps;
+}
+uint32 BotMgr::GetEngageDelayHeal() const { return _data->engage_delay_heal;
+}
+void BotMgr::SetEngageDelayDPS(uint32 delay)
+{
+    _data->engage_delay_dps = delay;
+}
+void BotMgr::SetEngageDelayHeal(uint32 delay)
+{
+    _data->engage_delay_heal = delay;
 }
 
 void BotMgr::PropagateEngageTimers() const
@@ -3027,6 +3113,19 @@ float BotMgr::GetBotDamageModByLevel(uint8 botlevel)
     if (bracket < _mult_dmg_levels.size())
         return _mult_dmg_levels[bracket];
     return 1.0f;
+}
+
+uint8 BotMgr::GetFollowDistDefault()
+{
+    return _basefollowdist;
+}
+uint32 BotMgr::GetEngageDelayDPSDefault()
+{
+    return _npcBotEngageDelayDPS_default;
+}
+uint32 BotMgr::GetEngageDelayHealDefault()
+{
+    return _npcBotEngageDelayHeal_default;
 }
 
 std::vector<Unit*> BotMgr::GetAllGroupMembers(Group const* group)
